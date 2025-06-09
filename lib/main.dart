@@ -548,5 +548,137 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  
+  Widget _buildStatCard({
+    required IconData icon,
+    required String value,
+    required String label,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPieChart() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: PieChart(
+          dataMap: _fileDistribution,
+          animationDuration: const Duration(milliseconds: 800),
+          chartLegendSpacing: 32,
+          chartRadius: MediaQuery.of(context).size.width / 3,
+          colorList: const [
+            Color(0xFFE94F4F),
+            Color(0xFFFF8A8A),
+            Color(0xFFFFB6B6),
+            Color(0xFFFFE2E2),
+          ],
+          initialAngleInDegree: 0,
+          chartType: ChartType.disc,
+          legendOptions: const LegendOptions(
+            showLegendsInRow: true,
+            legendPosition: LegendPosition.bottom,
+            showLegends: true,
+            legendTextStyle: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          chartValuesOptions: const ChartValuesOptions(
+            showChartValueBackground: true,
+            showChartValues: true,
+            showChartValuesInPercentage: true,
+            showChartValuesOutside: false,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFileList() {
+    if (_isEditingFileTypes) {
+      return _buildFileTypeEditor();
+    }
+
+    if (_isAnalyzing) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Processing files: $_processedFiles / $_totalFilesToProcess',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (_processedFiles > 0 && _totalFilesToProcess > 0)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: LinearProgressIndicator(
+                  value: _processedFiles / _totalFilesToProcess,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+  
+    if (_selectedFiles.isEmpty) {
+      return const Center(
+        child: Text('No files analyzed yet'),
+      );
+    }
+
+    var filteredFiles = _selectedFiles.where((file) {
+      return file.path.toLowerCase().contains(_searchQuery);
+    }).toList();
+
+    // Group files by type
+    Map<String, List<File>> groupedFiles = {};
+    for (var file in filteredFiles) {
+      String ext = file.path.split('.').last.toLowerCase();
+      String type = _getFileType(ext);
+      groupedFiles[type] = groupedFiles[type] ?? [];
+      groupedFiles[type]!.add(file as File);
+    }
+
+
 }
 
