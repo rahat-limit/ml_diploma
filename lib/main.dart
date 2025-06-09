@@ -128,4 +128,32 @@ class _MyHomePageState extends State<MyHomePage> {
     'system': {'exe', 'dll', 'sys', 'bat', 'sh', 'app', 'dmg', 'deb', 'rpm'}
   };
 
+  
+  final TextEditingController _newExtensionController = TextEditingController();
+  List<FileSystemEntity> _selectedFiles = [];
+  Map<String, double> _fileDistribution = {};
+  int _totalFiles = 0;
+  double _totalSize = 0;
+  int _categories = 0;
+  int _processedFiles = 0;
+  int _totalFilesToProcess = 0;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final Map<String, Map<String, dynamic>> _fileAnalysis = {};
+
+  
+  @override
+  void initState() {
+    super.initState();
+    _initializeServices();
+  }
+
+  Future<void> _initializeServices() async {
+    await _photoClassifier.initialize();
+    await _contentClassifier.initialize();
+    await _duplicateDetector.initialize();
+    await _autoTagger.initialize();
+  }
+
 }
