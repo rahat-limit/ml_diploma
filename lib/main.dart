@@ -332,6 +332,221 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildHeader(),
+              _buildStats(),
+              if (_fileDistribution.isNotEmpty) _buildPieChart(),
+              _buildFileList(),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _isAnalyzing ? null : _analyzeDirectory,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.folder_open),
+        label: const Text('Analyze'),
+      ),
+    );
+  }
+
+  
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: Icon(_isEditingFileTypes ? Icons.done : Icons.settings),
+              onPressed: () {
+                setState(() {
+                  _isEditingFileTypes = !_isEditingFileTypes;
+                });
+              },
+            ),
+            const Text(
+              'File Analysis Tool',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PopupMenuButton(
+                  icon: const Icon(Icons.more_vert),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      child: ListTile(
+                        leading: const Icon(Icons.api),
+                        title: const Text('API Host'),
+                        contentPadding: EdgeInsets.zero,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showHostConfigDialog(context);
+                        },
+                      ),
+                    ),
+                    PopupMenuItem(
+                      child: ListTile(
+                        leading: const Icon(Icons.history),
+                        title: const Text('History'),
+                        contentPadding: EdgeInsets.zero,
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ReportHistoryScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                    icon: const Icon(Icons.file_download_outlined),
+                    onPressed: _fileAnalysis.isEmpty
+                        ? null
+                        : () {
+                            final reportData = {
+                              'totalFiles': _totalFiles,
+                              'totalSize': _totalSize,
+                              'suspiciousFiles': <String>[],
+                              'securitySummary': {
+                                'filesWithSensitiveData': <String, dynamic>{},
+                              },
+                              'photoClassifications': Map.fromEntries(
+                                _fileAnalysis.entries
+                                    .where((e) => e.value['photo'] != null)
+                                    .map((e) {
+                                  final photo =
+                                      e.value['photo'] as ClassificationResult;
+                                  return MapEntry(e.key, {
+                                    'category': photo.category,
+                                    'mlLabels': photo.mlLabels,
+                                    'confidences': photo.confidences,
+                                  });
+                                }),
+                              ),
+                              'contentClassifications': Map.fromEntries(
+                                _fileAnalysis.entries
+                                    .where((e) => e.value['content'] != null)
+                                    .map((e) {
+                                  final content = e.value['content']
+                                      as ContentClassificationResult;
+                                  return MapEntry(e.key, {
+                                    'contentType': content.contentType,
+                                    'confidenceScores':
+                                        content.confidenceScores,
+                                    'detectedKeywords':
+                                        content.detectedKeywords,
+                                  });
+                                }),
+                              ),
+                              'duplicateDetections': Map.fromEntries(
+                                _fileAnalysis.entries
+                                    .where((e) => e.value['duplicate'] != null)
+                                    .map((e) {
+                                  final duplicate = e.value['duplicate']
+                                      as DuplicateDetectionResult;
+                                  return MapEntry(e.key, {
+                                    'isDuplicate': duplicate.isDuplicate,
+                                    'similarityScore':
+                                        duplicate.similarityScore,
+                                    'matchType': duplicate.matchType,
+                                    'matchedWith': duplicate.matchedWith,
+                                  });
+                                }),
+                              ),
+                              'autoTags': Map.fromEntries(
+                                _fileAnalysis.entries
+                                    .where((e) => e.value['tags'] != null)
+                                    .map((e) {
+                                  final tags =
+                                      e.value['tags'] as AutoTaggingResult;
+                                  return MapEntry(e.key, {
+                                    'tags': tags.tags,
+                                    'confidences': tags.confidences,
+                                  });
+                                }),
+                              ),
+                            };
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReportGenerationScreen(
+                                  reportData: reportData,
+                                ),
+                              ),
+                            );
+                          })
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Search files...',
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value.toLowerCase();
+            });
+          },
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildStats() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        children: [
+          _buildStatCard(
+            icon: Icons.folder,
+            value: _totalFiles.toString(),
+            label: 'Total Files',
+          ),
+          const SizedBox(width: 8),
+          _buildStatCard(
+            icon: Icons.data_usage,
+            value: '${_totalSize.toStringAsFixed(1)} MB',
+            label: 'Total Size',
+          ),
+          const SizedBox(width: 8),
+          _buildStatCard(
+            icon: Icons.category,
+            value: _categories.toString(),
+            label: 'Categories',
+          ),
+        ],
+      ),
+    );
+  }
 
 }
 
