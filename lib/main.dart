@@ -679,6 +679,283 @@ class _MyHomePageState extends State<MyHomePage> {
       groupedFiles[type]!.add(file as File);
     }
 
+    
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: groupedFiles.length,
+      itemBuilder: (context, index) {
+        String type = groupedFiles.keys.elementAt(index);
+        List<File> files = groupedFiles[type]!;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ExpansionTile(
+            initiallyExpanded: true,
+            leading: _getFileTypeIcon(type),
+            title: Text(
+              type.toUpperCase(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: Text(
+              '${files.length} file${files.length == 1 ? '' : 's'}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            backgroundColor: Colors.white,
+            collapsedBackgroundColor: Colors.white,
+            children: [
+              Column(
+                children: files.map<Widget>((file) {
+                  final analysis = _fileAnalysis[file.path];
+                  return Card(
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                    child: ExpansionTile(
+                      leading: _getFileTypeIcon(file.path),
+                      title: Text(
+                        file.path.split('/').last,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            _getFileType(
+                                file.path.split('.').last.toLowerCase()),
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          if (analysis == null)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Analyzing...',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (analysis['duplicate'] != null)
+                            _buildDuplicateIndicator(analysis['duplicate']),
+                        ],
+                      ),
+                      backgroundColor: Colors.white,
+                      collapsedBackgroundColor: Colors.white,
+                      children: [
+                        if (analysis != null) ...[
+                          if (analysis['photo'] != null)
+                            _buildPhotoAnalysis(analysis['photo']),
+                          if (analysis['content'] != null)
+                            _buildContentAnalysis(analysis['content']),
+                          if (analysis['duplicate'] != null)
+                            _buildDuplicateAnalysis(analysis['duplicate']),
+                          if (analysis['tags'] != null)
+                            _buildTagAnalysis(analysis['tags']),
+                        ],
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+              // )
+            ],
+          ),
+        );
+      },
+      // ),
+    );
+  }
+
+  
+  Widget _buildPhotoAnalysis(ClassificationResult result) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Photo Classification:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ...List.generate(
+            result.mlLabels.length,
+            (i) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '${result.mlLabels[i]} (${(result.confidences[i] * 100).toStringAsFixed(1)}%)',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  
+  Widget _buildContentAnalysis(ContentClassificationResult result) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Content Analysis:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text('Type: ${result.contentType}'),
+          if (result.contentType == 'chat' && result.chatAnalysis != null) ...[
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Chat Analysis:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextButton.icon(
+                  icon: Icon(
+                    _expandedChatMessages[result.hashCode.toString()] ?? false
+                        ? Icons.expand_less
+                        : Icons.expand_more,
+                    size: 20,
+                  ),
+                  label: Text(
+                    _expandedChatMessages[result.hashCode.toString()] ?? false
+                        ? 'Show Less'
+                        : 'Show All',
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _expandedChatMessages[result.hashCode.toString()] =
+                          !(_expandedChatMessages[result.hashCode.toString()] ??
+                              false);
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...(_expandedChatMessages[result.hashCode.toString()] ?? false
+                    ? result.chatAnalysis!
+                    : result.chatAnalysis!.take(3))
+                .map((message) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(8.0),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              message['message'] ?? '',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Label: ${message['label'] ?? 'Unknown'}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ))
+                .toList(),
+            if (!(_expandedChatMessages[result.hashCode.toString()] ?? false) &&
+                result.chatAnalysis!.length > 3)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  '${result.chatAnalysis!.length - 3} more messages...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+          ],
+          if (result.transcribedText != null &&
+              result.transcribedText!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('Transcribed Text:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(result.transcribedText!),
+          ],
+          if (result.category != null) ...[
+            const SizedBox(height: 8),
+            Text('Speech Category: ${result.category}',
+                style: TextStyle(
+                    color: result.category == 'hate_speech'
+                        ? Colors.red
+                        : Colors.green,
+                    fontWeight: FontWeight.bold)),
+          ],
+          const SizedBox(height: 8),
+          const Text('Keywords:',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          Wrap(
+            spacing: 8,
+            children: result.detectedKeywords
+                .map((keyword) => Chip(label: Text(keyword)))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDuplicateIndicator(DuplicateDetectionResult result) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(
+            result.isDuplicate ? Icons.warning : Icons.check_circle,
+            color: result.isDuplicate ? Colors.red : Colors.green,
+            size: 16,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            result.isDuplicate ? 'Duplicate' : 'Unique',
+            style: TextStyle(
+              color: result.isDuplicate ? Colors.red : Colors.green,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 
 }
 
