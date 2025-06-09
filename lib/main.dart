@@ -265,5 +265,73 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  
+  String _getFileType(String path) {
+    // Check for chat files first
+    if (path.toLowerCase().contains('chat') &&
+        path.toLowerCase().endsWith('.txt')) {
+      return 'chats';
+    }
+
+    // Get extension and check mappings
+    final extension = path.split('.').last.toLowerCase();
+    for (var entry in _fileTypeMappings.entries) {
+      if (entry.value.contains(extension)) {
+        return entry.key;
+      }
+    }
+    return 'others';
+  }
+
+  void _addExtension(String type, String extension) {
+    setState(() {
+      _fileTypeMappings[type] = {
+        ..._fileTypeMappings[type]!,
+        extension.toLowerCase()
+      };
+    });
+  }
+
+  void _removeExtension(String type, String extension) {
+    setState(() {
+      _fileTypeMappings[type] = _fileTypeMappings[type]!..remove(extension);
+    });
+  }
+
+  void _showAddExtensionDialog(String type) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add Extension to ${type.toUpperCase()}'),
+        content: TextField(
+          controller: _newExtensionController,
+          decoration: const InputDecoration(
+            hintText: 'Enter file extension (e.g., pdf)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _newExtensionController.clear();
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (_newExtensionController.text.isNotEmpty) {
+                _addExtension(type, _newExtensionController.text);
+                Navigator.pop(context);
+                _newExtensionController.clear();
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 }
 
