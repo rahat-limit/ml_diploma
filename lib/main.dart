@@ -54,5 +54,78 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  
+  final PhotoClassifierService _photoClassifier = PhotoClassifierService();
+  final FileContentClassifierService _contentClassifier =
+      FileContentClassifierService();
+  final DuplicateDetectionService _duplicateDetector =
+      DuplicateDetectionService();
+  final AutoTaggingService _autoTagger = AutoTaggingService();
+
+  bool _isAnalyzing = false;
+  bool _isEditingFileTypes = false;
+  Map<String, bool> _expandedChatMessages = {};
+
+  // Dynamic file type mappings
+  Map<String, Set<String>> _fileTypeMappings = {
+    'chats': {'txt'},
+    'images': {
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'webp',
+      'svg',
+      'tiff',
+      'ico',
+      'raw'
+    },
+    'documents': {
+      'pdf',
+      'doc',
+      'docx',
+      'txt',
+      'rtf',
+      'odt',
+      // 'pages',
+      'epub',
+      'md',
+      'tex'
+    },
+    'multimedia': {
+      'mp3',
+      'mp4',
+      'wav',
+      'avi',
+      'mov',
+      'mkv',
+      'flv',
+      'wmv',
+      'webm',
+      'm4a',
+      'm4v'
+    },
+    'code': {
+      'js',
+      'py',
+      'java',
+      'cpp',
+      'cs',
+      'html',
+      'css',
+      'php',
+      'rb',
+      'swift',
+      'kt',
+      'dart',
+      'go'
+    },
+    'archives': {'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso'},
+    'spreadsheets': {'xls', 'xlsx', 'csv', 'ods', 'numbers'},
+    'presentations': {'ppt', 'pptx', 'key', 'odp'},
+    'databases': {'sql', 'db', 'sqlite', 'mdb', 'accdb'},
+    'fonts': {'ttf', 'otf', 'woff', 'woff2', 'eot'},
+    'system': {'exe', 'dll', 'sys', 'bat', 'sh', 'app', 'dmg', 'deb', 'rpm'}
+  };
+
 }
