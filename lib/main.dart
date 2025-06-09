@@ -228,4 +228,42 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
   }
+  
+  Future<Map<String, dynamic>> _analyzeFile(
+      File file, BuildContext context) async {
+    String ext = file.path.split('.').last.toLowerCase();
+    String type = _getFileType(ext);
+    Map<String, dynamic> analysis = {};
+
+    try {
+      if (type == 'images') {
+        final photoResult = await _photoClassifier.classifyImage(file);
+        final tagResult = await _autoTagger.generateTags(file);
+        analysis['photo'] = photoResult;
+        analysis['tags'] = tagResult;
+      } else if (type == 'multimedia' ||
+          type == 'documents' ||
+          type == 'chats' ||
+          type == 'others') {
+        final contentResult =
+            await _contentClassifier.classifyContent(file, context);
+        analysis['content'] = contentResult;
+      }
+
+      final duplicateResult = await _duplicateDetector.checkForDuplicate(file);
+      analysis['duplicate'] = duplicateResult;
+
+      if (mounted) {
+        setState(() {
+          _fileAnalysis[file.path] = analysis;
+        });
+      }
+      return analysis;
+    } catch (e) {
+      print('Error analyzing file ${file.path}: $e');
+      return {};
+    }
+  }
+
 }
+
