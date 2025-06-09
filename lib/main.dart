@@ -156,4 +156,76 @@ class _MyHomePageState extends State<MyHomePage> {
     await _autoTagger.initialize();
   }
 
+  
+  Future<void> _analyzeDirectory() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.any,
+        allowCompression: false,
+      );
+
+      if (result == null) return;
+
+      final files = result.files.where((f) => f.path != null).toList();
+      setState(() {
+        _isAnalyzing = true;
+        _fileAnalysis.clear();
+        _selectedFiles.clear();
+        _fileDistribution.clear();
+        _processedFiles = 0;
+        _totalFilesToProcess = files.length;
+      });
+
+      // Process files in batches of 3
+      final batchSize = 3;
+      Map<String, int> typeCounts = {};
+      double totalSize = 0;
+      Set<String> categories = {};
+
+      for (var i = 0; i < files.length; i += batchSize) {
+        final batch = files.skip(i).take(batchSize);
+        await Future.wait(batch.map((file) async {
+          File fileEntity = File(file.path!);
+          _selectedFiles.add(fileEntity);
+
+          String ext = file.path!.split('.').last.toLowerCase();
+          String type = _getFileType(ext);
+
+          // Analyze file
+          await _analyzeFile(fileEntity, context);
+
+          // Update counters
+          typeCounts[type] = (typeCounts[type] ?? 0) + 1;
+          totalSize += file.size;
+          categories.add(type);
+
+          setState(() {
+            _processedFiles++;
+          });
+        }));
+
+        // Update UI after each batch
+        if (!mounted) return;
+        setState(() {
+          _fileDistribution = Map<String, double>.from(
+              typeCounts.map((k, v) => MapEntry(k, v.toDouble())));
+          _totalFiles = _selectedFiles.length;
+          _totalSize = totalSize / (1024 * 1024); // Convert to MB
+          _categories = categories.length;
+        });
+
+        // Give UI time to breathe between batches
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error analyzing directory: $e')),
+      );
+    } finally {
+      setState(() {
+        _isAnalyzing = false;
+      });
+    }
+  }
 }
