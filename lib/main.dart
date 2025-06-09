@@ -957,5 +957,243 @@ class _MyHomePageState extends State<MyHomePage> {
 
 
 
+  Widget _buildDuplicateAnalysis(DuplicateDetectionResult result) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                result.isDuplicate ? Icons.warning : Icons.check_circle,
+                color: result.isDuplicate ? Colors.red : Colors.green,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                result.isDuplicate
+                    ? 'Duplicate Detected'
+                    : 'No Duplicates Found',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          if (result.isDuplicate) ...[
+            const SizedBox(height: 8),
+            Text('Matched with: ${result.matchedWith}'),
+            Text(
+                'Similarity: ${(result.similarityScore * 100).toStringAsFixed(1)}%'),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagAnalysis(AutoTaggingResult result) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Auto-generated Tags:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(
+              result.tags.length,
+              (i) => Chip(
+                label: Text(result.tags[i]),
+                avatar: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: Text(
+                    '${(result.confidences[i] * 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getFileTypeIcon(String path) {
+    final extension = path.split('.').last.toLowerCase();
+    final type = _getFileType(extension);
+
+    switch (type) {
+      case 'chats':
+        return Icon(Icons.chat, color: Theme.of(context).colorScheme.primary);
+      case 'images':
+        return Icon(Icons.image, color: Theme.of(context).colorScheme.primary);
+      case 'documents':
+        return Icon(Icons.description,
+            color: Theme.of(context).colorScheme.primary);
+      case 'multimedia':
+        return Icon(Icons.play_circle,
+            color: Theme.of(context).colorScheme.primary);
+      case 'code':
+        return Icon(Icons.code, color: Theme.of(context).colorScheme.primary);
+      case 'archives':
+        return Icon(Icons.folder_zip,
+            color: Theme.of(context).colorScheme.primary);
+      case 'spreadsheets':
+        return Icon(Icons.table_chart,
+            color: Theme.of(context).colorScheme.primary);
+      case 'presentations':
+        return Icon(Icons.slideshow,
+            color: Theme.of(context).colorScheme.primary);
+      case 'databases':
+        return Icon(Icons.storage,
+            color: Theme.of(context).colorScheme.primary);
+      case 'fonts':
+        return Icon(Icons.text_fields,
+            color: Theme.of(context).colorScheme.primary);
+      case 'system':
+        return Icon(Icons.settings_applications,
+            color: Theme.of(context).colorScheme.primary);
+      default:
+        return Icon(Icons.insert_drive_file,
+            color: Theme.of(context).colorScheme.primary);
+    }
+  }
+
+  Widget _buildFileTypeEditor() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: _fileTypeMappings.length,
+      itemBuilder: (context, index) {
+        final type = _fileTypeMappings.keys.elementAt(index);
+        final extensions = _fileTypeMappings[type]!;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ExpansionTile(
+            initiallyExpanded: true,
+            leading: _getFileTypeIcon(type),
+            title: Text(
+              type.toUpperCase(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: Text(
+              '${extensions.length} extension${extensions.length == 1 ? '' : 's'}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: extensions
+                          .map((ext) => Chip(
+                                label: Text(ext),
+                                deleteIcon: const Icon(Icons.close, size: 18),
+                                onDeleted: () => _removeExtension(type, ext),
+                              ))
+                          .toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddExtensionDialog(type),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Extension'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showHostConfigDialog(BuildContext context) {
+    final apiConfig = Provider.of<ApiConfig>(context, listen: false);
+    final controller = TextEditingController(text: apiConfig.host);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Configure API Host'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Host Address',
+                hintText: 'e.g., 192.168.1.2',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Current host: ${apiConfig.getEffectiveHost()}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              apiConfig.resetHost();
+              Navigator.pop(context);
+            },
+            child: const Text('Reset to Default'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                apiConfig.setHost(controller.text);
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _photoClassifier.dispose();
+    _contentClassifier.dispose();
+    _duplicateDetector.dispose();
+    _autoTagger.dispose();
+    super.dispose();
+  }
+}
+
 }
 
